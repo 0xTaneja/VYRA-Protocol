@@ -1,0 +1,25 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.local
+.DS_Store
+*.tmp
+.vscode/
+.idea/
+coverage/
+*.tsbuildinfo
+
+# Circom compiler (dependency)
+circom/
+
+# Generated circuit files
+circuits/**/witness.wtns
+circuits/**/*.r1cs
+circuits/**/*.sym
+circuits/**/*.json
+!circuits/deposit_input.json
+!circuits/claim_input.json
+git_commit.sh
+git_commit_proper.sh
