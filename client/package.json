@@ -1,0 +1,27 @@
+{
+  "name": "client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@mysten/sui": "^1.45.0",
+    "@noble/hashes": "^2.0.1",
+    "circomlibjs": "^0.1.7",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0",
+    "poseidon-lite": "^0.3.0",
+    "snarkjs": "^0.7.5",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/snarkjs": "^0.7.9"
+  }
+}
