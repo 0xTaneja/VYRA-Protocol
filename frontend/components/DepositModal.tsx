@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ArrowLeft } from './Icons';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useUmbra } from '../lib/UmbraContext';
-import { buildDepositTxWithProof, deriveMVKFromSignature } from '../lib/umbraProtocol';
+import { generateCommitment, deriveMVKFromSignature } from '../lib/umbraProtocol';
+import { umbraClient } from '../lib/umbra';
 
 interface DepositModalProps {
   isOpen: boolean;
@@ -63,16 +64,21 @@ const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onSuccess,
 
       const recipientAddress = senderAddress;
 
-      console.log('🏗️ Building deposit transaction with real ZK proof...');
+      console.log('🏗️ Building deposit transaction (ZK verification disabled)...');
       console.log('Amount in MIST:', amountInMist.toString());
       console.log('Sender:', currentAccount.address);
       
-      const { tx, commitmentData } = await buildDepositTxWithProof({
-        amount: amountInMist,
-        senderAddress,
+      const commitmentData = generateCommitment({
         recipientAddress,
+        depositorAddress: senderAddress,
+        amount: amountInMist,
         suiMVK,
       });
+
+      const tx = await umbraClient.buildDepositTx({
+        amount: amountInMist,
+        payment: '',
+      }, currentAccount.address);
 
       const storedCommitment = {
         secret: commitmentData.secret.toString(),

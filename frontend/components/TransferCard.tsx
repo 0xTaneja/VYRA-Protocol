@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useUmbra } from '../lib/UmbraContext';
-import { buildClaimTxWithProof, deriveMVKFromSignature, type CommitmentData } from '../lib/umbraProtocol';
-import { MerkleTree } from '../lib/merkleTree';
+import { deriveMVKFromSignature, type CommitmentData } from '../lib/umbraProtocol';
+import { SparseMerkleTree } from '../lib/sparseMerkleTree';
+import { umbraClient } from '../lib/umbra';
+import { poseidonHash } from '../lib/crypto/poseidon';
 
 interface TransferCardProps {
   onSuccess: (digest: string) => void;
@@ -86,16 +88,25 @@ const TransferCard: React.FC<TransferCardProps> = ({ onSuccess, onError }) => {
 
       console.log('Using commitment:', commitment.commitment.toString());
 
-      console.log('🌲 Building Merkle tree...');
-      const tree = new MerkleTree(20, 0n);
-      const commitmentIndex = new Map<string, number>();
+      console.log('🌲 Fetching all commitments from blockchain...');
+      const allCommitments = await umbraClient.getAllCommitments();
+      console.log('Fetched', allCommitments.length, 'commitments from chain');
 
-      for (const c of storedCommitments) {
-        const index = tree.insert(c.commitment);
-        commitmentIndex.set(c.commitment.toString(), index);
+      console.log('🌲 Building sparse Merkle tree (20 levels)...');
+      const tree = new SparseMerkleTree(20, 0n);
+      
+      let leafIndex = -1;
+      for (const c of allCommitments) {
+        tree.insert(c.index, c.commitment);
+        if (c.commitment.toString() === commitment.commitment.toString()) {
+          leafIndex = c.index;
+        }
+      }
+      
+      if (leafIndex === -1) {
+        throw new Error('Commitment not found on-chain! Please make a deposit first.');
       }
 
-      const leafIndex = commitmentIndex.get(commitment.commitment.toString())!;
       const { siblings, pathIndices } = tree.getProof(leafIndex);
       const localRoot = tree.getRoot();
 
@@ -104,27 +115,30 @@ const TransferCard: React.FC<TransferCardProps> = ({ onSuccess, onError }) => {
 
       const merkleRoot = state?.merkleRoot || localRoot;
 
-      console.log('🔑 Deriving Umbra MVK...');
-      const message = new TextEncoder().encode('Umbra Protocol MVK Derivation');
-      const signatureBytes = new Uint8Array(Array.from(message).map((_, i) => i % 256)); 
-      const umbraMVK = deriveMVKFromSignature(signatureBytes);
-
-      console.log('🏗️ Building claim transaction with real ZK proof...');
+      console.log('🏗️ Building claim transaction (ZK verification disabled)...');
       console.log('Recipient:', recipient);
       console.log('Amount in MIST:', amountInMist.toString());
 
       const recipientAddr = recipient.startsWith('0x') ? recipient : `0x${recipient}`;
 
-      const tx = await buildClaimTxWithProof({
-        commitmentData: commitment,
-        recipientAddress: recipientAddr,
-        merkleRoot,
-        merklePathIndices: pathIndices,
-        merklePathSiblings: siblings,
-        umbraMVK,
-      });
+      const nullifierHash = poseidonHash([commitment.nullifier]);
+      const claimLinkerHash = poseidonHash([BigInt(leafIndex)]);
 
-      console.log('✅ Transaction built with real ZK proof');
+      const tx = await umbraClient.buildClaimTx({
+        recipient: recipientAddr,
+        amount: amountInMist,
+        nullifierHash,
+        claimLinkerHash,
+        merkleRoot,
+        proof: {
+          a: [0n, 0n],
+          b: [0n, 0n, 0n, 0n],
+          c: [0n, 0n],
+          publicInputs: [merkleRoot, nullifierHash, claimLinkerHash],
+        },
+      }, currentAccount.address);
+
+      console.log('✅ Transaction built (dummy proof)');
 
       signAndExecute(
         { transaction: tx },

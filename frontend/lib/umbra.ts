@@ -154,6 +154,37 @@ export class UmbraClient {
 
     return events.data;
   }
+
+  async getAllCommitments(): Promise<Array<{ commitment: bigint; index: number }>> {
+    const allEvents: Array<{ commitment: bigint; index: number }> = [];
+    let hasNextPage = true;
+    let cursor: string | null | undefined = null;
+
+    while (hasNextPage) {
+      const events = await this.suiClient.queryEvents({
+        query: {
+          MoveEventType: `${UMBRA_CONFIG.PACKAGE_ID}::umbra_core::DepositEvent`,
+        },
+        limit: 50,
+        order: 'ascending',
+        cursor,
+      });
+
+      for (const event of events.data) {
+        const parsedJson = event.parsedJson as any;
+        allEvents.push({
+          commitment: BigInt(parsedJson.commitment),
+          index: Number(parsedJson.index),
+        });
+      }
+
+      hasNextPage = events.hasNextPage;
+      cursor = events.nextCursor;
+    }
+
+    allEvents.sort((a, b) => a.index - b.index);
+    return allEvents;
+  }
 }
 
 export const umbraClient = new UmbraClient();

@@ -69,10 +69,10 @@ export function generateCommitment(params: {
 
   const depositITK = generateDepositITK(params.suiMVK, timestamp);
 
-  const linkerDomain = bytesToFieldElement(new TextEncoder().encode('LINKER'));
+  const linkerDomain = 360844717390540279866745n;
   const linkerKey = poseidonHash([depositITK, linkerDomain]);
 
-  const depositLinkerHash = poseidonHash([linkerKey, commitment]);
+  const depositLinkerHash = poseidonHash([linkerKey, recipientSplit.low, recipientSplit.high]);
 
   const mvkCommitment = poseidonHash([params.suiMVK]);
 
@@ -156,11 +156,11 @@ export async function buildClaimTxWithProof(params: {
   const claimTimestamp = new Date();
 
   const claimITK = generateClaimITK(params.umbraMVK, claimTimestamp);
-  const linkerDomain = bytesToFieldElement(new TextEncoder().encode('LINKER'));
+  const linkerDomain = 360844717390540279866745n;
   const linkerKey = poseidonHash([claimITK, linkerDomain]);
-  const claimLinkerHash = poseidonHash([linkerKey, params.commitmentData.commitment]);
+  const claimLinkerHash = poseidonHash([linkerKey, 0n]);
 
-  const nullifierHash = poseidonHash([params.commitmentData.nullifier, params.commitmentData.commitment]);
+  const nullifierHash = poseidonHash([params.commitmentData.nullifier]);
 
   const mvkCommitment = poseidonHash([params.umbraMVK]);
 
